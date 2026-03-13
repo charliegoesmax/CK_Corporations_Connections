@@ -1,0 +1,1461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Web — Corporate Connections</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=DM+Sans:wght@300;400;500;600&family=Alumni+Sans+Pinstripe&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<style>
+/* ══════════════════════════════════════════════════════════
+   DESIGN SYSTEM — matches Charlie's Orbit
+══════════════════════════════════════════════════════════ */
+:root {
+    --height: 1;
+    --base:   #2a2a2a;
+    --base-in:#1e1e1e;
+    --light:  rgba(255,255,255,0.08);
+    --shadow: rgba(0,0,0,0.55);
+    --gold:   #ffd700;
+    --blue:   #4a5fd8;
+    --red:    #cc2222;
+}
+
+*,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    height: 100vh; width: 100%; margin: 0;
+    background: var(--base);
+    font-family: 'DM Sans', sans-serif;
+    overflow: hidden;
+}
+
+/* ── Neumorphic helpers ──────────────────────────────────── */
+.neu-up {
+    box-shadow:
+        calc(0.33rem * var(--height)) calc(0.33rem * var(--height)) 0.7rem var(--shadow),
+        calc(-0.33rem * var(--height)) calc(-0.33rem * var(--height)) 0.7rem var(--light);
+}
+.neu-down {
+    box-shadow:
+        inset calc(0.25rem * var(--height)) calc(0.25rem * var(--height)) 0.6rem var(--shadow),
+        inset calc(-0.25rem * var(--height)) calc(-0.25rem * var(--height)) 0.6rem var(--light);
+}
+.neu-btn {
+    box-shadow:
+        calc(0.33rem * var(--height)) calc(0.33rem * var(--height)) 0.7rem var(--shadow),
+        calc(-0.33rem * var(--height)) calc(-0.33rem * var(--height)) 0.7rem var(--light);
+    transition: box-shadow 0.15s ease, transform 0.15s ease;
+    cursor: pointer;
+}
+.neu-btn:hover {
+    box-shadow:
+        inset calc(0.25rem * var(--height)) calc(0.25rem * var(--height)) 0.6rem var(--shadow),
+        inset calc(-0.25rem * var(--height)) calc(-0.25rem * var(--height)) 0.6rem var(--light);
+    transform: translateY(1px);
+}
+.neu-btn:active { transform: translateY(2px); }
+
+/* ══════════════════════════════════════════════════════════
+   LAYOUT
+══════════════════════════════════════════════════════════ */
+main {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    --m: 8px;
+    padding: var(--m);
+    gap: var(--m);
+}
+
+main section {
+    flex: 1;
+    height: 100%;
+    position: relative;
+    border-radius: 18px;
+    background: var(--base-in);
+    box-shadow:
+        inset 3px 3px 10px var(--shadow),
+        inset -2px -2px 8px var(--light);
+    overflow: hidden;
+}
+
+main aside {
+    flex: 0 0 270px;
+    height: 100%;
+    position: relative;
+    padding: 14px 12px 80px 12px;
+    background: var(--base);
+    border-radius: 18px;
+    color: #e0e0e0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    box-shadow:
+        5px 5px 14px var(--shadow),
+        -3px -3px 10px var(--light);
+    transition: margin-left 0.3s ease, opacity 0.3s ease;
+}
+
+main aside.collapsed {
+    margin-left: calc(-270px - 12px);
+    opacity: 0;
+    pointer-events: none;
+}
+
+main aside::-webkit-scrollbar       { width: 4px; }
+main aside::-webkit-scrollbar-track { background: transparent; }
+main aside::-webkit-scrollbar-thumb { background: rgba(255,215,0,0.2); border-radius: 2px; }
+
+/* ══════════════════════════════════════════════════════════
+   SIDEBAR TOGGLE
+══════════════════════════════════════════════════════════ */
+.toggle-sidebar {
+    position: fixed; left: 0; top: 20px;
+    background: var(--base); color: var(--gold);
+    border: none; width: 38px; height: 100px;
+    border-radius: 0 14px 14px 0;
+    cursor: pointer; font-size: 18px;
+    display: flex; align-items: flex-start;
+    padding-top: 12px; justify-content: center;
+    transition: left 0.3s ease; z-index: 1000;
+    box-shadow: 4px 4px 10px var(--shadow), -1px -2px 8px var(--light);
+    font-family: "Alumni Sans Pinstripe", sans-serif;
+}
+.toggle-sidebar:hover { color: #fff; box-shadow: inset 3px 3px 8px var(--shadow), inset -2px -2px 6px var(--light); }
+
+.mode-buttons {
+    position: fixed; left: 0; top: 140px;
+    display: flex; flex-direction: column; gap: 8px;
+    transition: left 0.3s ease; z-index: 1;
+}
+.mode-buttons.expanded-state { left: 278px; }
+
+.mode-button {
+    background: var(--base); color: #aaa;
+    border: none; width: 38px; height: 38px;
+    border-radius: 0 12px 12px 0;
+    cursor: pointer; font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 4px 4px 10px var(--shadow), -1px -2px 8px var(--light);
+    transition: box-shadow 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+.mode-button:hover { color: var(--gold); box-shadow: inset 3px 3px 8px var(--shadow), inset -2px -2px 6px var(--light); transform: translateX(2px); }
+.mode-button.active { color: var(--gold); box-shadow: inset 3px 3px 8px var(--shadow), inset -2px -2px 6px var(--light); }
+.mode-button.active:hover { transform: none; }
+
+.mode-button-wrapper { position: relative; }
+.mode-tooltip {
+    position: absolute; left: 46px; top: 50%; transform: translateY(-50%);
+    background: var(--base); color: var(--gold);
+    border-radius: 8px; padding: 5px 12px;
+    font-family: "Alumni Sans Pinstripe", sans-serif;
+    font-size: 20px; letter-spacing: 1px;
+    white-space: nowrap; pointer-events: none; opacity: 0;
+    transition: opacity 0.15s ease; z-index: 2000;
+    box-shadow: 3px 3px 8px var(--shadow), -2px -2px 6px var(--light);
+}
+.mode-button-wrapper:hover .mode-tooltip { opacity: 1; }
+
+.menu-text {
+    position: fixed; left: 0; top: 60px;
+    transform: rotate(90deg); transform-origin: left top;
+    color: #667; font-size: 22px; font-weight: 700;
+    font-family: "Alumni Sans Pinstripe", sans-serif;
+    letter-spacing: 3px; text-transform: uppercase;
+    transition: left 0.3s ease; z-index: 9999; pointer-events: none;
+}
+.menu-text.collapsed-state { left: 35px; }
+.menu-text.expanded-state  { left: 308px; }
+
+/* ══════════════════════════════════════════════════════════
+   SIDEBAR TYPOGRAPHY
+══════════════════════════════════════════════════════════ */
+main aside h1 {
+    text-align: center; text-transform: uppercase;
+    font-family: "Alumni Sans Pinstripe", sans-serif;
+    font-size: 4.4em; line-height: 0.8em; font-weight: normal;
+    margin-bottom: 2px; color: var(--gold);
+    letter-spacing: 2px; text-shadow: 0 0 20px rgba(255,215,0,0.2);
+}
+main aside h2 {
+    text-align: center; text-transform: uppercase;
+    font-family: "Alumni Sans Pinstripe", sans-serif;
+    margin-top: 2px; font-size: 1.8em; letter-spacing: 1.5px; color: #aaa;
+}
+main aside h3 {
+    text-align: center; margin-bottom: 16px; font-size: 0.9em;
+    font-family: 'DM Sans', sans-serif; color: #888; line-height: 1.5;
+}
+main aside p { text-align: left; font-family: 'DM Sans', sans-serif; font-size: 14px; color: #aaa; }
+
+.sidebar-divider {
+    height: 1px; margin: 10px 4px; border-radius: 1px;
+    box-shadow: 0 1px 0 var(--light), 0 -1px 0 rgba(0,0,0,0.4);
+    background: transparent;
+}
+
+/* ── Collapsible sections ─────────────────────────────── */
+.collapsible-section { margin-bottom: 10px; }
+.collapsible-btn {
+    width: 100%; background: var(--base); color: var(--gold);
+    border: none; border-radius: 12px; padding: 9px 14px;
+    font-family: "Alumni Sans Pinstripe", sans-serif;
+    font-size: 1.7em; text-transform: uppercase; letter-spacing: 1px;
+    cursor: pointer; display: flex; align-items: center; justify-content: space-between;
+    text-align: left;
+    box-shadow: 3px 3px 8px var(--shadow), -2px -2px 6px var(--light);
+    transition: box-shadow 0.15s ease, color 0.15s ease;
+}
+.collapsible-btn:hover { color: #fff; }
+.collapsible-btn.open {
+    box-shadow: inset 2px 2px 6px var(--shadow), inset -1px -1px 5px var(--light);
+}
+.collapsible-btn .caret { font-size: 0.9em; transition: transform 0.25s ease; }
+.collapsible-btn.open .caret { transform: rotate(90deg); }
+.collapsible-body { max-height: 0; overflow: hidden; transition: max-height 0.35s ease, padding 0.2s ease; padding: 0 4px; }
+.collapsible-body.open { max-height: 2000px; padding: 8px 4px 6px 4px; }
+
+/* ── Action buttons in sidebar ──────────────────────────── */
+.action-btn {
+    width: 100%; padding: 10px 14px;
+    background: var(--base); color: var(--gold);
+    border: none; border-radius: 10px; cursor: pointer;
+    font-size: 1.3em; font-weight: 700;
+    font-family: "Alumni Sans Pinstripe", sans-serif;
+    letter-spacing: 1px; text-transform: uppercase;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    margin-bottom: 8px;
+    box-shadow: 3px 3px 8px var(--shadow), -2px -2px 6px var(--light);
+    transition: box-shadow 0.15s ease, color 0.15s ease;
+}
+.action-btn:hover {
+    color: #fff;
+    box-shadow: inset 2px 2px 6px var(--shadow), inset -1px -1px 4px var(--light);
+}
+
+/* ── Stats row ──────────────────────────────────────────── */
+.stats-row { display: flex; gap: 8px; margin: 10px 0; }
+.stat-box {
+    flex: 1; border-radius: 10px; padding: 8px 6px; text-align: center;
+    background: var(--base-in);
+    box-shadow: inset 2px 2px 6px var(--shadow), inset -1px -1px 5px var(--light);
+}
+.stat-val { font-family: 'Alumni Sans Pinstripe', sans-serif; font-size: 26px; color: var(--gold); line-height: 1; }
+.stat-lbl { font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 0.6px; margin-top: 2px; }
+
+/* ══════════════════════════════════════════════════════════
+   WATERMARK
+══════════════════════════════════════════════════════════ */
+.watermark {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    pointer-events: none; z-index: 0; text-align: center; user-select: none;
+}
+.watermark-text {
+    font-family: "Alumni Sans Pinstripe", sans-serif;
+    color: white; opacity: 0.04; white-space: nowrap; line-height: 0.8;
+}
+.watermark-main { font-size: 20vw; }
+.watermark-sub  { font-size: 10vw; }
+
+/* ══════════════════════════════════════════════════════════
+   MATRIX VIEW
+══════════════════════════════════════════════════════════ */
+#matrix-view {
+    width: 100%; height: 100%;
+    overflow: auto; padding: 20px;
+    position: relative;
+}
+#matrix-view::-webkit-scrollbar { width: 6px; height: 6px; }
+#matrix-view::-webkit-scrollbar-track { background: transparent; }
+#matrix-view::-webkit-scrollbar-thumb { background: rgba(255,215,0,0.2); border-radius: 3px; }
+
+.matrix-table {
+    border-collapse: separate; border-spacing: 0;
+    min-width: max-content;
+}
+
+/* Column headers (people) */
+.matrix-table .person-header {
+    vertical-align: bottom; padding-bottom: 10px;
+    text-align: center; position: sticky; top: 0; z-index: 10;
+    background: var(--base-in);
+}
+.person-header-inner {
+    display: inline-block;
+    transform: rotate(-55deg);
+    transform-origin: bottom center;
+    white-space: nowrap;
+    font-family: "Alumni Sans Pinstripe", sans-serif;
+    font-size: 15px; color: #aaa; letter-spacing: 0.5px;
+    padding-bottom: 4px;
+    cursor: default;
+    transition: color 0.2s;
+}
+.person-header-inner.hovered { color: var(--gold); }
+
+/* Row headers (entities) */
+.entity-row td.entity-name {
+    padding: 0 14px 0 2px;
+    white-space: nowrap;
+    font-family: "Alumni Sans Pinstripe", sans-serif;
+    font-size: 16px; color: #ddd; letter-spacing: 0.5px;
+    cursor: pointer; position: sticky; left: 0; z-index: 5;
+    background: var(--base-in);
+    transition: color 0.2s;
+    min-width: 150px;
+}
+.entity-row td.entity-name:hover { color: var(--gold); }
+.entity-row td.entity-name .entity-label { display: flex; align-items: center; gap: 6px; }
+.entity-row td.entity-name .entity-edit { opacity: 0; font-size: 11px; color: #555; transition: opacity 0.2s; cursor: pointer; }
+.entity-row td.entity-name:hover .entity-edit { opacity: 1; }
+
+/* Cells */
+.entity-row td.cell {
+    text-align: center; padding: 2px;
+    transition: background 0.15s;
+}
+.entity-row { transition: background 0.15s; }
+.entity-row:hover { background: rgba(255,215,0,0.03); }
+.entity-row td.cell.col-hovered { background: rgba(255,215,0,0.04); }
+
+/* Connection dot */
+.dot-wrap {
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    margin: auto;
+    border-radius: 8px; cursor: pointer;
+    transition: background 0.15s;
+}
+.dot-wrap:hover { background: rgba(255,215,0,0.12); }
+.dot {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--gold);
+    box-shadow: 0 0 8px rgba(255,215,0,0.5);
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+.dot.blue { background: var(--blue); box-shadow: 0 0 8px rgba(74,95,216,0.5); }
+.dot-wrap:hover .dot { transform: scale(1.3); box-shadow: 0 0 14px rgba(255,215,0,0.7); }
+.dot-wrap.empty:hover .dot-placeholder {
+    width: 10px; height: 10px; border-radius: 50%;
+    border: 1px solid rgba(255,215,0,0.2);
+    display: block;
+}
+
+/* Member count badges */
+.count-cell {
+    text-align: center; padding: 2px 4px;
+    font-family: "Alumni Sans Pinstripe", sans-serif;
+    font-size: 14px; color: #555; letter-spacing: 0.5px;
+    position: sticky; right: 0; background: var(--base-in);
+}
+.count-cell.has-count { color: var(--gold); }
+
+.header-corner {
+    position: sticky; top: 0; left: 0; z-index: 20;
+    background: var(--base-in);
+    padding: 0 10px 10px 2px;
+    font-family: "Alumni Sans Pinstripe", sans-serif;
+    font-size: 11px; color: #444; text-transform: uppercase;
+    letter-spacing: 1px; vertical-align: bottom;
+}
+
+/* Connection count row */
+.count-row td {
+    text-align: center; padding: 2px;
+    border-top: 1px solid rgba(255,215,0,0.08);
+    font-family: "Alumni Sans Pinstripe", sans-serif;
+    font-size: 13px; color: #555;
+    position: sticky; bottom: 0; background: var(--base-in); z-index: 5;
+}
+.count-row td.count-val.has-count { color: var(--gold); }
+.count-row td.count-label {
+    position: sticky; left: 0; bottom: 0; z-index: 10;
+    background: var(--base-in); text-align: left;
+    padding-left: 2px; font-size: 11px; color: #444;
+}
+
+/* Overlap highlight */
+.cell.member-hovered .dot { box-shadow: 0 0 18px rgba(255,215,0,0.9); transform: scale(1.2); }
+
+/* ══════════════════════════════════════════════════════════
+   NETWORK VIEW (D3)
+══════════════════════════════════════════════════════════ */
+#network-view {
+    width: 100%; height: 100%;
+    display: none;
+}
+#network-view.active { display: block; }
+#network-view svg { width: 100%; height: 100%; border-radius: 18px; }
+
+.net-group-link { fill: none; stroke: #667; stroke-width: 1.8px; stroke-opacity: 0.7; }
+.net-group-node { fill: var(--blue); stroke: var(--gold); stroke-width: 2px; cursor: pointer; }
+.net-person-node { fill: var(--gold); stroke: #fff200; stroke-width: 1.5px; cursor: grab; }
+.net-person-node:active { cursor: grabbing; }
+.net-node-label { fill: #e0e0e0; font: bold 13px 'DM Sans', sans-serif; pointer-events: none; text-transform: capitalize; }
+.net-group-label { fill: var(--gold); font: bold 15px "Alumni Sans Pinstripe", sans-serif; pointer-events: none; letter-spacing: 1px; }
+
+/* ══════════════════════════════════════════════════════════
+   ENTITY HOVER CARD
+══════════════════════════════════════════════════════════ */
+.entity-card {
+    position: fixed; z-index: 1200; width: 320px;
+    background: var(--base); border-radius: 20px; overflow: hidden;
+    box-shadow:
+        8px 8px 20px var(--shadow),
+        -4px -4px 14px var(--light),
+        0 0 0 1px rgba(255,215,0,0.1);
+    opacity: 0; pointer-events: none;
+    transform: translateY(10px) scale(0.96);
+    transition: opacity 0.22s ease, transform 0.22s ease;
+    font-family: 'DM Sans', sans-serif;
+}
+.entity-card.visible { opacity: 1; pointer-events: auto; transform: translateY(0) scale(1); }
+
+.ec-stripe { height: 3px; background: linear-gradient(90deg, #4a5fd8, #ffd700, #4a5fd8); }
+.ec-header { padding: 14px 16px 10px; }
+.ec-name {
+    font-family: 'Alumni Sans Pinstripe', sans-serif;
+    font-size: 26px; color: #fff; text-transform: uppercase;
+    letter-spacing: 1.5px; line-height: 1.1;
+    margin-bottom: 8px;
+}
+.ec-desc { font-size: 13px; color: #aaa; line-height: 1.5; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 10px; }
+.ec-members { padding: 10px 16px 14px; }
+.ec-members-title {
+    font-family: "Alumni Sans Pinstripe", sans-serif;
+    font-size: 13px; text-transform: uppercase; letter-spacing: 1px;
+    color: #555; margin-bottom: 8px;
+}
+.ec-member-pill {
+    display: inline-block; margin: 3px 3px 3px 0;
+    background: rgba(74,95,216,0.12); color: #8fa3ff;
+    border: 1px solid rgba(74,95,216,0.22); border-radius: 20px;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
+    text-transform: uppercase; padding: 3px 10px;
+    box-shadow: inset 1px 1px 3px rgba(0,0,0,0.3);
+}
+.ec-stat-row { display: flex; gap: 8px; margin-top: 10px; }
+.ec-stat {
+    flex: 1; border-radius: 10px; padding: 7px 8px; text-align: center;
+    background: var(--base-in);
+    box-shadow: inset 2px 2px 6px var(--shadow), inset -1px -1px 5px var(--light);
+}
+.ec-stat-val { font-family: 'Alumni Sans Pinstripe', sans-serif; font-size: 22px; color: var(--gold); line-height: 1; }
+.ec-stat-lbl { font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 0.6px; margin-top: 2px; }
+
+/* ══════════════════════════════════════════════════════════
+   PERSON HOVER CARD
+══════════════════════════════════════════════════════════ */
+.person-card {
+    position: fixed; z-index: 1200; width: 280px;
+    background: var(--base); border-radius: 20px; overflow: hidden;
+    box-shadow:
+        8px 8px 20px var(--shadow),
+        -4px -4px 14px var(--light),
+        0 0 0 1px rgba(255,215,0,0.08);
+    opacity: 0; pointer-events: none;
+    transform: translateY(10px) scale(0.96);
+    transition: opacity 0.22s ease, transform 0.22s ease;
+    font-family: 'DM Sans', sans-serif;
+}
+.person-card.visible { opacity: 1; pointer-events: auto; transform: translateY(0) scale(1); }
+.pc-stripe { height: 3px; background: linear-gradient(90deg, #ffd700, #4a5fd8, #ffd700); }
+.pc-body { padding: 14px 16px; }
+.pc-name {
+    font-family: 'Alumni Sans Pinstripe', sans-serif;
+    font-size: 24px; color: var(--gold); text-transform: uppercase;
+    letter-spacing: 1.2px; margin-bottom: 8px;
+}
+.pc-orgs-title { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #555; margin-bottom: 6px; font-weight: 600; }
+.pc-org-tag {
+    display: inline-block; margin: 2px 2px 2px 0;
+    background: rgba(255,215,0,0.08); color: #cca500;
+    border: 1px solid rgba(255,215,0,0.15); border-radius: 6px;
+    font-size: 11px; padding: 2px 8px;
+}
+.pc-overlap { margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.06); }
+.pc-overlap-title { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #555; margin-bottom: 6px; font-weight: 600; }
+.pc-overlap-item { font-size: 12px; color: #aaa; margin-bottom: 3px; }
+.pc-overlap-item span { color: var(--gold); }
+
+/* ══════════════════════════════════════════════════════════
+   MODAL
+══════════════════════════════════════════════════════════ */
+.modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 2000;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
+}
+.modal-overlay.visible { opacity: 1; pointer-events: auto; }
+
+.modal {
+    background: var(--base); border-radius: 20px; padding: 24px;
+    width: 460px; max-width: 95vw; max-height: 85vh; overflow-y: auto;
+    box-shadow:
+        12px 12px 28px var(--shadow),
+        -6px -6px 18px var(--light),
+        0 0 0 1px rgba(255,215,0,0.08);
+    transform: scale(0.94);
+    transition: transform 0.2s ease;
+}
+.modal-overlay.visible .modal { transform: scale(1); }
+
+.modal h2 {
+    font-family: "Alumni Sans Pinstripe", sans-serif;
+    font-size: 2.2em; color: var(--gold); text-transform: uppercase;
+    letter-spacing: 2px; margin-bottom: 16px; text-align: center;
+}
+.modal label {
+    display: block; font-size: 11px; text-transform: uppercase;
+    letter-spacing: 1px; color: #667; margin-bottom: 4px; margin-top: 14px;
+    font-weight: 600;
+}
+.modal input, .modal textarea {
+    width: 100%; padding: 10px 14px;
+    background: var(--base-in); color: #e0e0e0;
+    border: none; border-radius: 10px; font-size: 14px;
+    font-family: 'DM Sans', sans-serif;
+    box-shadow: inset 2px 2px 6px var(--shadow), inset -1px -1px 4px var(--light);
+    outline: none; resize: vertical;
+}
+.modal input:focus, .modal textarea:focus {
+    box-shadow: inset 2px 2px 6px var(--shadow), inset -1px -1px 4px var(--light), 0 0 0 1px rgba(255,215,0,0.25);
+}
+.modal .modal-btns { display: flex; gap: 10px; margin-top: 20px; }
+.modal .modal-btns button { flex: 1; }
+
+.modal-confirm {
+    padding: 11px; background: var(--base); color: var(--gold);
+    border: none; border-radius: 10px; cursor: pointer;
+    font-family: "Alumni Sans Pinstripe", sans-serif;
+    font-size: 1.4em; text-transform: uppercase; letter-spacing: 1px;
+    box-shadow: 3px 3px 8px var(--shadow), -2px -2px 6px var(--light);
+    transition: box-shadow 0.15s, color 0.15s;
+}
+.modal-confirm:hover { color: #fff; box-shadow: inset 2px 2px 6px var(--shadow), inset -1px -1px 4px var(--light); }
+.modal-cancel {
+    padding: 11px; background: var(--base); color: #667;
+    border: none; border-radius: 10px; cursor: pointer;
+    font-family: "Alumni Sans Pinstripe", sans-serif;
+    font-size: 1.4em; text-transform: uppercase; letter-spacing: 1px;
+    box-shadow: 3px 3px 8px var(--shadow), -2px -2px 6px var(--light);
+    transition: box-shadow 0.15s, color 0.15s;
+}
+.modal-cancel:hover { color: #999; box-shadow: inset 2px 2px 6px var(--shadow), inset -1px -1px 4px var(--light); }
+.modal-delete { color: #cc4444 !important; }
+
+.member-checkboxes {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 2px;
+}
+.member-checkbox {
+    display: flex; align-items: center; padding: 6px 8px;
+    background: var(--base-in); border-radius: 8px; cursor: pointer;
+    box-shadow: inset 1px 1px 4px var(--shadow), inset -1px -1px 3px var(--light);
+    transition: box-shadow 0.15s;
+}
+.member-checkbox:hover { box-shadow: inset 2px 2px 5px var(--shadow), inset -1px -1px 4px var(--light); }
+.member-checkbox input { margin-right: 6px; accent-color: var(--gold); cursor: pointer; }
+.member-checkbox label { font-size: 12px; color: #ccc; cursor: pointer; user-select: none; }
+
+/* ══════════════════════════════════════════════════════════
+   SEARCH / FILTER
+══════════════════════════════════════════════════════════ */
+.search-wrap {
+    position: relative; margin-bottom: 8px;
+}
+.search-wrap input {
+    width: 100%; padding: 8px 12px 8px 32px;
+    background: var(--base-in); color: #e0e0e0;
+    border: none; border-radius: 10px; font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    box-shadow: inset 2px 2px 6px var(--shadow), inset -1px -1px 4px var(--light);
+    outline: none;
+}
+.search-wrap::before {
+    content: '🔍'; position: absolute; left: 9px; top: 50%;
+    transform: translateY(-50%); font-size: 13px; pointer-events: none;
+}
+
+/* ══════════════════════════════════════════════════════════
+   EXPORT / IMPORT
+══════════════════════════════════════════════════════════ */
+.small-btn {
+    padding: 6px 12px; background: var(--base); color: #777;
+    border: none; border-radius: 8px; cursor: pointer;
+    font-family: "Alumni Sans Pinstripe", sans-serif;
+    font-size: 1.1em; letter-spacing: 0.5px; text-transform: uppercase;
+    box-shadow: 2px 2px 6px var(--shadow), -1px -1px 4px var(--light);
+    transition: box-shadow 0.12s, color 0.12s; flex: 1;
+}
+.small-btn:hover { color: var(--gold); box-shadow: inset 2px 2px 5px var(--shadow), inset -1px -1px 3px var(--light); }
+
+/* ══════════════════════════════════════════════════════════
+   OVERLAP PANEL (sidebar)
+══════════════════════════════════════════════════════════ */
+.overlap-item {
+    padding: 7px 10px; background: var(--base); border-radius: 10px;
+    margin-bottom: 5px; font-size: 12px;
+    box-shadow: inset 2px 2px 5px var(--shadow), inset -1px -1px 4px var(--light);
+}
+.overlap-item .oi-name { color: #ddd; font-weight: 600; margin-bottom: 3px; font-size: 13px; }
+.overlap-item .oi-orgs { color: #667; font-size: 11px; }
+.overlap-item .oi-count { color: var(--gold); font-family: "Alumni Sans Pinstripe", sans-serif; font-size: 18px; float: right; }
+
+/* delete button on entity names */
+.delete-btn { color: #cc4444; cursor: pointer; opacity: 0; font-size: 11px; transition: opacity 0.2s; padding: 0 3px; }
+.entity-row:hover .delete-btn { opacity: 1; }
+
+/* person delete in header */
+.person-del { color: #cc4444; cursor: pointer; opacity: 0; font-size: 10px; display: block; text-align: center; margin-top: 2px; transition: opacity 0.2s; }
+.person-header:hover .person-del { opacity: 1; }
+
+/* highlight ring for top connectors */
+.dot.top-connector { box-shadow: 0 0 14px 2px rgba(255,215,0,0.8); }
+</style>
+</head>
+<body>
+
+<div class="watermark">
+    <div class="watermark-text watermark-main">THE WEB</div>
+    <div class="watermark-text watermark-sub">corporate connections</div>
+</div>
+
+<main>
+    <!-- SIDEBAR -->
+    <aside id="sidebar" class="collapsed">
+        <h1>The<br>Web</h1>
+        <h2>Corporate Connections</h2>
+        <h3>Map who belongs to which organizations — and where paths cross.</h3>
+
+        <div class="stats-row">
+            <div class="stat-box">
+                <div class="stat-val" id="stat-entities">0</div>
+                <div class="stat-lbl">Entities</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-val" id="stat-people">0</div>
+                <div class="stat-lbl">People</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-val" id="stat-links">0</div>
+                <div class="stat-lbl">Links</div>
+            </div>
+        </div>
+
+        <div class="sidebar-divider"></div>
+
+        <!-- Add buttons -->
+        <button class="action-btn" onclick="openAddEntity()">＋ Add Entity / Org</button>
+        <button class="action-btn" onclick="openAddPerson()">＋ Add Person</button>
+
+        <div class="sidebar-divider"></div>
+
+        <!-- Overlap panel -->
+        <div class="collapsible-section">
+            <button class="collapsible-btn" onclick="toggleSection(this)">🔗 Top Overlaps <span class="caret">▶</span></button>
+            <div class="collapsible-body">
+                <p style="font-size:12px;color:#555;margin-bottom:8px;">People sharing the most orgs</p>
+                <div id="overlap-list"></div>
+            </div>
+        </div>
+
+        <div class="collapsible-section">
+            <button class="collapsible-btn" onclick="toggleSection(this)">🎮 Controls <span class="caret">▶</span></button>
+            <div class="collapsible-body">
+                <p>📌 <strong>Hover</strong> an entity name to see its description card.</p>
+                <p>📌 <strong>Hover</strong> a person header to highlight their memberships.</p>
+                <p>📌 <strong>Click</strong> a dot to toggle membership.</p>
+                <p>📌 <strong>Click</strong> entity name to edit its description.</p>
+                <p>📌 Network: <strong>drag</strong> to pin nodes.</p>
+            </div>
+        </div>
+
+        <div class="collapsible-section">
+            <button class="collapsible-btn" onclick="toggleSection(this)">🗺️ Legend <span class="caret">▶</span></button>
+            <div class="collapsible-body">
+                <p><strong style="color:var(--gold);">● Gold dot</strong> = member of organization</p>
+                <p><strong style="color:var(--blue);">● Blue node</strong> = organization (network view)</p>
+                <p><strong style="color:var(--gold);">● Gold node</strong> = person (network view)</p>
+                <p>Right column = number of members per org.</p>
+                <p>Bottom row = number of orgs per person.</p>
+            </div>
+        </div>
+
+        <div class="sidebar-divider"></div>
+
+        <div class="collapsible-section">
+            <button class="collapsible-btn" onclick="toggleSection(this)">💾 Data <span class="caret">▶</span></button>
+            <div class="collapsible-body">
+                <div style="display:flex;gap:6px;margin-bottom:6px;">
+                    <button class="small-btn" onclick="exportCSV()">↓ Export CSV</button>
+                    <button class="small-btn" onclick="triggerImport()">↑ Import CSV</button>
+                </div>
+                <input type="file" id="csv-import" accept=".csv" style="display:none" onchange="importCSV(event)">
+                <p style="font-size:11px;color:#444;margin-top:4px;">CSV format: Entity, Description, Person1, Person2…<br>Use "x" to mark membership.</p>
+            </div>
+        </div>
+    </aside>
+
+    <!-- SIDEBAR TOGGLE -->
+    <button class="toggle-sidebar collapsed-state" id="toggleBtn" onclick="toggleSidebar()">▶</button>
+    <div class="menu-text collapsed-state" id="menuText">MENU</div>
+
+    <!-- MODE BUTTONS -->
+    <div class="mode-buttons collapsed-state" id="modeButtons">
+        <div class="mode-button-wrapper">
+            <button class="mode-button active" id="matrixBtn" onclick="switchMode('matrix')">⊞</button>
+            <div class="mode-tooltip">Matrix View</div>
+        </div>
+        <div class="mode-button-wrapper">
+            <button class="mode-button" id="networkBtn" onclick="switchMode('network')">🕸️</button>
+            <div class="mode-tooltip">Network View</div>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <section>
+        <!-- Matrix View -->
+        <div id="matrix-view">
+            <div id="matrix-container"></div>
+        </div>
+
+        <!-- Network View -->
+        <div id="network-view">
+            <svg id="network-svg"></svg>
+        </div>
+    </section>
+</main>
+
+<!-- Entity Hover Card -->
+<div class="entity-card" id="entityCard">
+    <div class="ec-stripe"></div>
+    <div class="ec-header">
+        <div class="ec-name" id="ec-name"></div>
+        <div class="ec-desc" id="ec-desc"></div>
+    </div>
+    <div class="ec-members">
+        <div class="ec-members-title">Members</div>
+        <div id="ec-members-list"></div>
+        <div class="ec-stat-row">
+            <div class="ec-stat">
+                <div class="ec-stat-val" id="ec-count"></div>
+                <div class="ec-stat-lbl">Members</div>
+            </div>
+            <div class="ec-stat">
+                <div class="ec-stat-val" id="ec-density"></div>
+                <div class="ec-stat-lbl">Density</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Person Hover Card -->
+<div class="person-card" id="personCard">
+    <div class="pc-stripe"></div>
+    <div class="pc-body">
+        <div class="pc-name" id="pc-name"></div>
+        <div class="pc-orgs-title">Member of</div>
+        <div id="pc-orgs"></div>
+        <div class="pc-overlap" id="pc-overlap-section">
+            <div class="pc-overlap-title">Shares orgs with</div>
+            <div id="pc-overlaps"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Overlay -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalIfOutside(event)">
+    <div class="modal" id="modalBox">
+        <h2 id="modal-title">Add Entity</h2>
+        <div id="modal-body"></div>
+    </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+// DATA MODEL
+// ══════════════════════════════════════════════════════════
+
+let DATA = {
+    entities: [
+        { name: "Nazarene Fund",  description: "" },
+        { name: "Millie Lewis",   description: "" },
+        { name: "TPUSA",          description: "" },
+        { name: "TPUSA Faith",    description: "" },
+    ],
+    people: ["Lori Frantzve","Erika Frantzve","Tim Ballard","Jaco Booyens","David Barton","Tim Barton","Glenn Beck","Philipa Booyens","Rob McCoy","Victor Marx","Farris Bros","Koch"],
+    // memberships[entityIdx][personIdx] = true/false
+    memberships: [
+        // NazareneFund: Tim Ballard, Tim Barton, Glenn Beck, Victor Marx, Farris Bros
+        [false,false,true,false,false,true,true,false,false,true,true,false],
+        // Millie Lewis: Erika Frantzve, David Barton, Rob McCoy, Victor Marx, Koch
+        [false,true,false,false,true,false,false,false,true,true,false,true],
+        // TPUSA: Tim Ballard, David Barton, Philipa Booyens, Victor Marx
+        [false,false,true,false,true,false,false,true,false,true,false,false],
+        // TPUSA Faith
+        [false,false,false,false,false,false,false,false,false,false,false,false],
+    ]
+};
+
+// Load from localStorage if available
+(function() {
+    try {
+        const saved = localStorage.getItem('the-web-data');
+        if (saved) DATA = JSON.parse(saved);
+    } catch(e) {}
+})();
+
+function saveData() {
+    try { localStorage.setItem('the-web-data', JSON.stringify(DATA)); } catch(e) {}
+    updateStats();
+    updateOverlapList();
+}
+
+// ══════════════════════════════════════════════════════════
+// STATS & OVERLAPS
+// ══════════════════════════════════════════════════════════
+function updateStats() {
+    const totalLinks = DATA.memberships.reduce((s,row) => s + row.filter(Boolean).length, 0);
+    document.getElementById('stat-entities').textContent = DATA.entities.length;
+    document.getElementById('stat-people').textContent   = DATA.people.length;
+    document.getElementById('stat-links').textContent    = totalLinks;
+}
+
+function getPersonOrgs(pIdx) {
+    return DATA.entities.filter((_, eIdx) => DATA.memberships[eIdx] && DATA.memberships[eIdx][pIdx]);
+}
+
+function computeOverlaps() {
+    // For each pair of people, how many orgs do they share?
+    const pairs = [];
+    for (let i = 0; i < DATA.people.length; i++) {
+        for (let j = i+1; j < DATA.people.length; j++) {
+            const shared = DATA.entities.filter((_,eIdx) =>
+                DATA.memberships[eIdx] && DATA.memberships[eIdx][i] && DATA.memberships[eIdx][j]
+            );
+            if (shared.length > 0) {
+                pairs.push({ a: DATA.people[i], b: DATA.people[j], count: shared.length, orgs: shared.map(e=>e.name) });
+            }
+        }
+    }
+    return pairs.sort((a,b) => b.count - a.count);
+}
+
+function updateOverlapList() {
+    const list = document.getElementById('overlap-list');
+    if (!list) return;
+    const pairs = computeOverlaps().slice(0,8);
+    if (pairs.length === 0) {
+        list.innerHTML = '<p style="color:#555;font-size:12px;">No overlaps yet.</p>';
+        return;
+    }
+    list.innerHTML = pairs.map(p => `
+        <div class="overlap-item">
+            <span class="oi-count">${p.count}</span>
+            <div class="oi-name">${p.a} & ${p.b}</div>
+            <div class="oi-orgs">${p.orgs.join(', ')}</div>
+        </div>
+    `).join('');
+}
+
+// ══════════════════════════════════════════════════════════
+// SIDEBAR & MODE CONTROLS
+// ══════════════════════════════════════════════════════════
+let sidebarOpen = false;
+function toggleSidebar() {
+    sidebarOpen = !sidebarOpen;
+    const sidebar   = document.getElementById('sidebar');
+    const btn       = document.getElementById('toggleBtn');
+    const menuText  = document.getElementById('menuText');
+    const modeBtns  = document.getElementById('modeButtons');
+    sidebar.classList.toggle('collapsed', !sidebarOpen);
+    btn.textContent = sidebarOpen ? '◀' : '▶';
+    btn.classList.toggle('collapsed-state', !sidebarOpen);
+    menuText.classList.toggle('collapsed-state', !sidebarOpen);
+    menuText.classList.toggle('expanded-state',  sidebarOpen);
+    modeBtns.classList.toggle('collapsed-state', !sidebarOpen);
+    modeBtns.classList.toggle('expanded-state',  sidebarOpen);
+}
+
+function toggleSection(btn) {
+    btn.classList.toggle('open');
+    btn.nextElementSibling.classList.toggle('open');
+}
+
+let currentMode = 'matrix';
+function switchMode(mode) {
+    currentMode = mode;
+    document.getElementById('matrix-view').style.display  = mode === 'matrix'  ? 'block' : 'none';
+    document.getElementById('network-view').classList.toggle('active', mode === 'network');
+    document.getElementById('matrixBtn').classList.toggle('active', mode === 'matrix');
+    document.getElementById('networkBtn').classList.toggle('active', mode === 'network');
+    if (mode === 'network') buildNetwork();
+}
+
+// ══════════════════════════════════════════════════════════
+// MATRIX VIEW
+// ══════════════════════════════════════════════════════════
+let hoveredPersonIdx = null;
+let hoveredEntityIdx = null;
+
+function buildMatrix() {
+    const container = document.getElementById('matrix-container');
+    if (!container) return;
+
+    // Compute per-person org counts to flag top connectors
+    const personCounts = DATA.people.map((_,pi) =>
+        DATA.memberships.filter(row => row[pi]).length
+    );
+    const maxCount = Math.max(...personCounts, 1);
+
+    const table = document.createElement('table');
+    table.className = 'matrix-table';
+
+    // ── Header row ────────────────────────────────────────
+    const thead = table.createTHead();
+    const hrow  = thead.insertRow();
+
+    // Corner cell
+    const corner = document.createElement('th');
+    corner.className = 'header-corner';
+    corner.innerHTML = 'Entity / Person →';
+    hrow.appendChild(corner);
+
+    DATA.people.forEach((person, pi) => {
+        const th = document.createElement('th');
+        th.className = 'person-header';
+        th.dataset.pi = pi;
+        th.innerHTML = `
+            <div class="person-header-inner" id="ph-${pi}">${person}</div>
+            <span class="person-del" title="Delete person" onclick="deletePerson(${pi})">✕</span>
+        `;
+        th.addEventListener('mouseenter', () => setPersonHover(pi));
+        th.addEventListener('mouseleave', () => setPersonHover(null));
+        // Person card on hover
+        th.addEventListener('mouseenter', (e) => showPersonCard(e, pi));
+        th.addEventListener('mouseleave', () => hidePersonCard());
+        hrow.appendChild(th);
+    });
+
+    // Count header
+    const countTh = document.createElement('th');
+    countTh.className = 'person-header';
+    countTh.innerHTML = `<div class="person-header-inner" style="color:#444;">#</div>`;
+    hrow.appendChild(countTh);
+
+    // ── Body rows ─────────────────────────────────────────
+    const tbody = table.createTBody();
+
+    DATA.entities.forEach((entity, ei) => {
+        const row = tbody.insertRow();
+        row.className = 'entity-row';
+        row.dataset.ei = ei;
+
+        // Entity name cell
+        const nameTd = document.createElement('td');
+        nameTd.className = 'entity-name';
+        nameTd.innerHTML = `
+            <div class="entity-label">
+                <span onclick="openEditEntity(${ei})" title="Click to edit">${entity.name}</span>
+                <span class="delete-btn" title="Delete entity" onclick="deleteEntity(${ei})">✕</span>
+            </div>
+        `;
+        nameTd.addEventListener('mouseenter', (e) => showEntityCard(e, ei));
+        nameTd.addEventListener('mouseleave', () => hideEntityCard());
+        row.appendChild(nameTd);
+
+        // Member cells
+        DATA.people.forEach((_, pi) => {
+            const td = document.createElement('td');
+            td.className = 'cell';
+            td.dataset.ei = ei;
+            td.dataset.pi = pi;
+
+            const isMember = DATA.memberships[ei] && DATA.memberships[ei][pi];
+            const wrap = document.createElement('div');
+            wrap.className = 'dot-wrap' + (isMember ? '' : ' empty');
+
+            if (isMember) {
+                const dot = document.createElement('div');
+                dot.className = 'dot' + (personCounts[pi] === maxCount && maxCount > 1 ? ' top-connector' : '');
+                wrap.appendChild(dot);
+            } else {
+                const ph = document.createElement('div');
+                ph.className = 'dot-placeholder';
+                ph.style.cssText = 'width:10px;height:10px;border-radius:50%;border:1px dashed rgba(255,215,0,0.12);';
+                wrap.appendChild(ph);
+            }
+
+            wrap.title = `${isMember ? 'Remove' : 'Add'}: ${DATA.people[pi]} ↔ ${entity.name}`;
+            wrap.onclick = () => toggleMembership(ei, pi);
+            td.appendChild(wrap);
+            row.appendChild(td);
+        });
+
+        // Row count
+        const count = DATA.memberships[ei] ? DATA.memberships[ei].filter(Boolean).length : 0;
+        const countTd = document.createElement('td');
+        countTd.className = 'count-cell' + (count > 0 ? ' has-count' : '');
+        countTd.textContent = count > 0 ? count : '';
+        row.appendChild(countTd);
+    });
+
+    // ── Footer count row ──────────────────────────────────
+    const tfoot = table.createTFoot();
+    const frow  = tfoot.insertRow();
+    frow.className = 'count-row';
+
+    const flabel = document.createElement('td');
+    flabel.className = 'count-label';
+    flabel.textContent = '# orgs';
+    frow.appendChild(flabel);
+
+    DATA.people.forEach((_, pi) => {
+        const count = DATA.memberships.filter(row => row[pi]).length;
+        const td = document.createElement('td');
+        td.className = 'count-val' + (count > 0 ? ' has-count' : '');
+        td.textContent = count > 0 ? count : '';
+        frow.appendChild(td);
+    });
+
+    const ftotal = document.createElement('td');
+    frow.appendChild(ftotal);
+
+    container.innerHTML = '';
+    container.appendChild(table);
+}
+
+function setPersonHover(pi) {
+    hoveredPersonIdx = pi;
+    document.querySelectorAll('.person-header-inner').forEach((el, i) => {
+        el.classList.toggle('hovered', i === pi);
+    });
+    document.querySelectorAll('td.cell').forEach(td => {
+        td.classList.toggle('col-hovered', parseInt(td.dataset.pi) === pi);
+    });
+}
+
+function toggleMembership(ei, pi) {
+    if (!DATA.memberships[ei]) DATA.memberships[ei] = new Array(DATA.people.length).fill(false);
+    DATA.memberships[ei][pi] = !DATA.memberships[ei][pi];
+    saveData();
+    buildMatrix();
+}
+
+// ══════════════════════════════════════════════════════════
+// HOVER CARDS
+// ══════════════════════════════════════════════════════════
+let entityCardTimer = null;
+function showEntityCard(e, ei) {
+    clearTimeout(entityCardTimer);
+    const card   = document.getElementById('entityCard');
+    const entity = DATA.entities[ei];
+    const members = DATA.people.filter((_,pi) => DATA.memberships[ei] && DATA.memberships[ei][pi]);
+
+    document.getElementById('ec-name').textContent  = entity.name;
+    document.getElementById('ec-desc').textContent  = entity.description || 'No description yet. Click entity name to add one.';
+    document.getElementById('ec-count').textContent = members.length;
+    document.getElementById('ec-density').textContent = DATA.people.length
+        ? Math.round((members.length / DATA.people.length) * 100) + '%'
+        : '0%';
+    document.getElementById('ec-members-list').innerHTML =
+        members.map(m => `<span class="ec-member-pill">${m}</span>`).join('') ||
+        '<span style="color:#555;font-size:12px;">No members yet</span>';
+
+    positionCard(card, e);
+    card.classList.add('visible');
+}
+function hideEntityCard() {
+    entityCardTimer = setTimeout(() => document.getElementById('entityCard').classList.remove('visible'), 120);
+}
+
+let personCardTimer = null;
+function showPersonCard(e, pi) {
+    clearTimeout(personCardTimer);
+    const card   = document.getElementById('personCard');
+    const person = DATA.people[pi];
+    const orgs   = getPersonOrgs(pi);
+
+    document.getElementById('pc-name').textContent = person;
+    document.getElementById('pc-orgs').innerHTML   = orgs.length
+        ? orgs.map(o => `<span class="pc-org-tag">${o.name}</span>`).join('')
+        : '<span style="color:#555;font-size:12px;">No memberships</span>';
+
+    // Overlaps
+    const overlaps = [];
+    DATA.people.forEach((other, oi) => {
+        if (oi === pi) return;
+        const shared = DATA.entities.filter((_,eIdx) =>
+            DATA.memberships[eIdx] && DATA.memberships[eIdx][pi] && DATA.memberships[eIdx][oi]
+        );
+        if (shared.length > 0) overlaps.push({ name: other, count: shared.length, orgs: shared.map(e=>e.name) });
+    });
+    overlaps.sort((a,b) => b.count - a.count);
+
+    const overlapSec = document.getElementById('pc-overlap-section');
+    const overlapList = document.getElementById('pc-overlaps');
+    if (overlaps.length > 0) {
+        overlapSec.style.display = 'block';
+        overlapList.innerHTML = overlaps.slice(0,4).map(o =>
+            `<div class="pc-overlap-item"><span>${o.name}</span> — <span>${o.count}</span> shared org${o.count>1?'s':''}</div>`
+        ).join('');
+    } else {
+        overlapSec.style.display = 'none';
+    }
+
+    positionCard(card, e);
+    card.classList.add('visible');
+}
+function hidePersonCard() {
+    personCardTimer = setTimeout(() => document.getElementById('personCard').classList.remove('visible'), 120);
+}
+
+function positionCard(card, event) {
+    const vw = window.innerWidth, vh = window.innerHeight;
+    let x = event.clientX + 16, y = event.clientY - 20;
+    card.style.opacity = '0';
+    card.style.display = 'block';
+    const cw = card.offsetWidth || 320, ch = card.offsetHeight || 200;
+    if (x + cw > vw - 10) x = event.clientX - cw - 10;
+    if (y + ch > vh - 10) y = vh - ch - 10;
+    if (y < 10) y = 10;
+    card.style.left = x + 'px';
+    card.style.top  = y + 'px';
+    card.style.opacity = '';
+}
+
+// ══════════════════════════════════════════════════════════
+// NETWORK VIEW (D3 force-directed)
+// ══════════════════════════════════════════════════════════
+let networkBuilt = false;
+function buildNetwork() {
+    if (networkBuilt) {
+        // Rebuild if data changed
+        d3.select('#network-svg').selectAll('*').remove();
+        networkBuilt = false;
+    }
+    networkBuilt = true;
+
+    const svg    = d3.select('#network-svg');
+    const el     = document.getElementById('network-view');
+    const width  = el.clientWidth;
+    const height = el.clientHeight;
+
+    svg.append('defs').append('marker')
+        .attr('id','arrow').attr('viewBox','0 -5 10 10')
+        .attr('refX',18).attr('refY',0)
+        .attr('markerWidth',6).attr('markerHeight',6)
+        .attr('orient','auto')
+        .append('path').attr('d','M0,-5L10,0L0,5').attr('fill','#667');
+
+    const g = svg.append('g');
+
+    // Zoom
+    svg.call(d3.zoom().scaleExtent([0.2, 4]).on('zoom', e => g.attr('transform', e.transform)));
+
+    // Nodes
+    const nodes = [
+        ...DATA.entities.map((e,i) => ({ id:'e_'+i, name: e.name, type:'entity', count: DATA.memberships[i]?DATA.memberships[i].filter(Boolean).length:0 })),
+        ...DATA.people.map((p,i)   => ({ id:'p_'+i, name: p, type:'person' }))
+    ];
+
+    const links = [];
+    DATA.entities.forEach((_, ei) => {
+        DATA.people.forEach((_,pi) => {
+            if (DATA.memberships[ei] && DATA.memberships[ei][pi]) {
+                links.push({ source: 'e_'+ei, target: 'p_'+pi });
+            }
+        });
+    });
+
+    const sim = d3.forceSimulation(nodes)
+        .force('link', d3.forceLink(links).id(d=>d.id).distance(120))
+        .force('center', d3.forceCenter(width/2, height/2))
+        .force('charge', d3.forceManyBody().strength(-250))
+        .force('collision', d3.forceCollide().radius(d => d.type==='entity' ? 30 : 14));
+
+    const link = g.append('g').selectAll('line').data(links).enter().append('line')
+        .attr('class','net-group-link');
+
+    const node = g.append('g').selectAll('g').data(nodes).enter().append('g')
+        .call(d3.drag()
+            .on('start', (ev,d) => { if(!ev.active) sim.alphaTarget(0.3).restart(); d.fx=d.x; d.fy=d.y; })
+            .on('drag',  (ev,d) => { d.fx=ev.x; d.fy=ev.y; })
+            .on('end',   (ev,d) => { if(!ev.active) sim.alphaTarget(0); })
+        )
+        .on('dblclick', (_,d) => { d.fx=null; d.fy=null; });
+
+    node.append('circle')
+        .attr('class', d => d.type==='entity' ? 'net-group-node' : 'net-person-node')
+        .attr('r', d => d.type==='entity' ? Math.max(16, 10 + (d.count||0)*2.5) : 9);
+
+    node.append('text')
+        .attr('class', d => d.type==='entity' ? 'net-group-label' : 'net-node-label')
+        .attr('y', d => d.type==='entity' ? -(Math.max(16, 10+(d.count||0)*2.5)) - 4 : -13)
+        .attr('text-anchor','middle')
+        .text(d => d.name);
+
+    // Entity hover cards in network view
+    node.filter(d => d.type==='entity')
+        .on('mouseover', function(event,d) {
+            const ei = parseInt(d.id.replace('e_',''));
+            showEntityCard(event, ei);
+        })
+        .on('mousemove', function(event,d) {
+            const card = document.getElementById('entityCard');
+            if (card.classList.contains('visible')) positionCard(card, event);
+        })
+        .on('mouseout', () => hideEntityCard());
+
+    node.filter(d => d.type==='person')
+        .on('mouseover', function(event,d) {
+            const pi = parseInt(d.id.replace('p_',''));
+            showPersonCard(event, pi);
+        })
+        .on('mousemove', function(event,d) {
+            const card = document.getElementById('personCard');
+            if (card.classList.contains('visible')) positionCard(card, event);
+        })
+        .on('mouseout', () => hidePersonCard());
+
+    sim.on('tick', () => {
+        link.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y)
+            .attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
+        node.attr('transform', d=>`translate(${d.x},${d.y})`);
+    });
+}
+
+// ══════════════════════════════════════════════════════════
+// MODALS — ADD/EDIT ENTITY
+// ══════════════════════════════════════════════════════════
+function openModal() { document.getElementById('modalOverlay').classList.add('visible'); }
+function closeModal() { document.getElementById('modalOverlay').classList.remove('visible'); }
+function closeModalIfOutside(e) { if (e.target === document.getElementById('modalOverlay')) closeModal(); }
+
+function openAddEntity() {
+    document.getElementById('modal-title').textContent = 'Add Entity / Org';
+    document.getElementById('modal-body').innerHTML = `
+        <label>Entity Name</label>
+        <input type="text" id="m-entity-name" placeholder="e.g. Heritage Foundation" />
+        <label>Description</label>
+        <textarea id="m-entity-desc" rows="3" placeholder="What is this organization? (shown on hover card)"></textarea>
+        <label>Initial Members</label>
+        <div class="member-checkboxes" id="m-member-checks">
+            ${DATA.people.map((p,i) => `
+                <label class="member-checkbox">
+                    <input type="checkbox" value="${i}">
+                    <label>${p}</label>
+                </label>
+            `).join('')}
+        </div>
+        <div class="modal-btns">
+            <button class="modal-cancel" onclick="closeModal()">Cancel</button>
+            <button class="modal-confirm" onclick="confirmAddEntity()">Add Entity</button>
+        </div>
+    `;
+    openModal();
+    setTimeout(() => document.getElementById('m-entity-name').focus(), 100);
+}
+
+function confirmAddEntity() {
+    const name = document.getElementById('m-entity-name').value.trim();
+    if (!name) { document.getElementById('m-entity-name').style.boxShadow='0 0 0 1px #cc4444,inset 2px 2px 6px var(--shadow)'; return; }
+    const desc = document.getElementById('m-entity-desc').value.trim();
+    const members = [...document.querySelectorAll('#m-member-checks input:checked')].map(cb => parseInt(cb.value));
+    const row = new Array(DATA.people.length).fill(false);
+    members.forEach(pi => { row[pi] = true; });
+    DATA.entities.push({ name, description: desc });
+    DATA.memberships.push(row);
+    saveData();
+    buildMatrix();
+    networkBuilt = false;
+    closeModal();
+}
+
+function openEditEntity(ei) {
+    const entity = DATA.entities[ei];
+    document.getElementById('modal-title').textContent = 'Edit Entity';
+    document.getElementById('modal-body').innerHTML = `
+        <label>Entity Name</label>
+        <input type="text" id="m-entity-name" value="${entity.name.replace(/"/g,'&quot;')}" />
+        <label>Description</label>
+        <textarea id="m-entity-desc" rows="4" placeholder="Describe this organization...">${entity.description || ''}</textarea>
+        <label>Members</label>
+        <div class="member-checkboxes" id="m-member-checks">
+            ${DATA.people.map((p,pi) => `
+                <label class="member-checkbox">
+                    <input type="checkbox" value="${pi}" ${DATA.memberships[ei] && DATA.memberships[ei][pi] ? 'checked' : ''}>
+                    <label>${p}</label>
+                </label>
+            `).join('')}
+        </div>
+        <div class="modal-btns">
+            <button class="modal-cancel modal-delete" onclick="deleteEntity(${ei});closeModal();">🗑 Delete</button>
+            <button class="modal-cancel" onclick="closeModal()">Cancel</button>
+            <button class="modal-confirm" onclick="confirmEditEntity(${ei})">Save</button>
+        </div>
+    `;
+    openModal();
+}
+
+function confirmEditEntity(ei) {
+    const name = document.getElementById('m-entity-name').value.trim();
+    if (!name) return;
+    const desc = document.getElementById('m-entity-desc').value.trim();
+    const row = new Array(DATA.people.length).fill(false);
+    [...document.querySelectorAll('#m-member-checks input:checked')].forEach(cb => {
+        row[parseInt(cb.value)] = true;
+    });
+    DATA.entities[ei] = { name, description: desc };
+    DATA.memberships[ei] = row;
+    saveData();
+    buildMatrix();
+    networkBuilt = false;
+    closeModal();
+}
+
+function deleteEntity(ei) {
+    DATA.entities.splice(ei, 1);
+    DATA.memberships.splice(ei, 1);
+    saveData();
+    buildMatrix();
+    networkBuilt = false;
+}
+
+// ══════════════════════════════════════════════════════════
+// MODALS — ADD/DELETE PERSON
+// ══════════════════════════════════════════════════════════
+function openAddPerson() {
+    document.getElementById('modal-title').textContent = 'Add Person';
+    document.getElementById('modal-body').innerHTML = `
+        <label>Person's Name</label>
+        <input type="text" id="m-person-name" placeholder="Full name" />
+        <label>Initial Memberships</label>
+        <div class="member-checkboxes" id="m-org-checks">
+            ${DATA.entities.map((e,i) => `
+                <label class="member-checkbox">
+                    <input type="checkbox" value="${i}">
+                    <label>${e.name}</label>
+                </label>
+            `).join('')}
+        </div>
+        <div class="modal-btns">
+            <button class="modal-cancel" onclick="closeModal()">Cancel</button>
+            <button class="modal-confirm" onclick="confirmAddPerson()">Add Person</button>
+        </div>
+    `;
+    openModal();
+    setTimeout(() => document.getElementById('m-person-name').focus(), 100);
+}
+
+function confirmAddPerson() {
+    const name = document.getElementById('m-person-name').value.trim();
+    if (!name) { document.getElementById('m-person-name').style.boxShadow='0 0 0 1px #cc4444'; return; }
+    const orgs = [...document.querySelectorAll('#m-org-checks input:checked')].map(cb => parseInt(cb.value));
+    DATA.people.push(name);
+    const pi = DATA.people.length - 1;
+    DATA.memberships.forEach((row, ei) => {
+        row.push(orgs.includes(ei));
+    });
+    saveData();
+    buildMatrix();
+    networkBuilt = false;
+    closeModal();
+}
+
+function deletePerson(pi) {
+    if (!confirm(`Remove "${DATA.people[pi]}" from all entities?`)) return;
+    DATA.people.splice(pi, 1);
+    DATA.memberships.forEach(row => row.splice(pi, 1));
+    saveData();
+    buildMatrix();
+    networkBuilt = false;
+}
+
+// ══════════════════════════════════════════════════════════
+// CSV EXPORT / IMPORT
+// ══════════════════════════════════════════════════════════
+function exportCSV() {
+    const rows = [['Entity','Description',...DATA.people]];
+    DATA.entities.forEach((e,ei) => {
+        const row = [e.name, e.description || ''];
+        DATA.people.forEach((_,pi) => {
+            row.push(DATA.memberships[ei] && DATA.memberships[ei][pi] ? 'x' : '');
+        });
+        rows.push(row);
+    });
+    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type:'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'the-web-data.csv';
+    a.click();
+}
+
+function triggerImport() { document.getElementById('csv-import').click(); }
+
+function importCSV(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const text = e.target.result;
+        const lines = text.split(/\r?\n/).filter(l => l.trim());
+        if (lines.length < 2) return alert('CSV needs at least 2 rows (header + data).');
+
+        // Parse CSV (simple version - handles quoted fields)
+        function parseRow(line) {
+            const result = [];
+            let cur = '', inQ = false;
+            for (let i = 0; i < line.length; i++) {
+                if (line[i] === '"') {
+                    if (inQ && line[i+1] === '"') { cur += '"'; i++; }
+                    else inQ = !inQ;
+                } else if (line[i] === ',' && !inQ) { result.push(cur); cur = ''; }
+                else cur += line[i];
+            }
+            result.push(cur);
+            return result;
+        }
+
+        const headers = parseRow(lines[0]);
+        // Detect if second col is Description
+        const hasDesc = headers[1] && headers[1].toLowerCase().includes('desc');
+        const personStart = hasDesc ? 2 : 1;
+        const people = headers.slice(personStart).map(h => h.trim()).filter(Boolean);
+        const entities = [];
+        const memberships = [];
+
+        for (let i = 1; i < lines.length; i++) {
+            const cols = parseRow(lines[i]);
+            const name = cols[0] ? cols[0].trim() : '';
+            if (!name) continue;
+            const desc = hasDesc ? (cols[1] || '').trim() : '';
+            entities.push({ name, description: desc });
+            const row = people.map((_,pi) => {
+                const val = (cols[personStart + pi] || '').trim().toLowerCase();
+                return val === 'x' || val === '1' || val === 'true' || val === 'yes';
+            });
+            memberships.push(row);
+        }
+
+        DATA = { entities, people, memberships };
+        saveData();
+        buildMatrix();
+        networkBuilt = false;
+        event.target.value = '';
+    };
+    reader.readAsText(file);
+}
+
+// ══════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+    updateStats();
+    updateOverlapList();
+    buildMatrix();
+});
+</script>
+</body>
+</html>
